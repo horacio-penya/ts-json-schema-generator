@@ -6,7 +6,6 @@ import { isAssignableTo } from "../Utils/isAssignableTo";
 import { narrowType } from "../Utils/narrowType";
 import { UnionType } from "../Type/UnionType";
 import { EnumType } from "../Type/EnumType";
-import { assert } from "console";
 
 export class ConditionalTypeNodeParser implements SubNodeParser {
     public constructor(protected typeChecker: ts.TypeChecker, protected childNodeParser: NodeParser) {}
@@ -16,7 +15,7 @@ export class ConditionalTypeNodeParser implements SubNodeParser {
     }
 
     public createType(node: ts.ConditionalTypeNode, context: Context): BaseType | undefined {
-        let checkType = this.childNodeParser.createType(node.checkType, context);
+        const checkType = this.childNodeParser.createType(node.checkType, context);
         const extendsType = this.childNodeParser.createType(node.extendsType, context);
         const checkTypeParameterName = this.getTypeParameterName(node.checkType);
 
@@ -26,10 +25,7 @@ export class ConditionalTypeNodeParser implements SubNodeParser {
             return this.childNodeParser.createType(result ? node.trueType : node.falseType, context);
         }
 
-        while ("getType" in checkType!) checkType = (checkType as any).getType();
-
-        const types =
-            checkType instanceof UnionType || checkType instanceof EnumType ? checkType.getTypes() : [checkType];
+        const types = getTypes(checkType!);
 
         const results = types.map((type) =>
             this.childNodeParser.createType(
@@ -88,4 +84,12 @@ export class ConditionalTypeNodeParser implements SubNodeParser {
 
         return subContext;
     }
+}
+
+function getTypes(checkType: BaseType): BaseType[] {
+    while ("getType" in checkType) checkType = (checkType as any).getType();
+
+    return checkType instanceof UnionType || checkType instanceof EnumType
+        ? checkType.getTypes().flatMap(getTypes)
+        : [checkType];
 }
