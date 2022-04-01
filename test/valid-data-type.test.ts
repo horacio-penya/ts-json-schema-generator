@@ -108,6 +108,8 @@ describe("valid-data-type", () => {
     it("type-conditional-omit", assertValidSchema("type-conditional-omit", "MyObject"));
     it("type-conditional-jsdoc", assertValidSchema("type-conditional-jsdoc", "MyObject", "extended"));
 
+    it("type-conditional-distribution", assertValidSchema("type-conditional-distribution"));
+
     it("type-recursive-deep-exclude", assertValidSchema("type-recursive-deep-exclude", "MyType"));
     it("ignore-export", assertValidSchema("ignore-export", "*"));
 });
