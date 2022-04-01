@@ -5,6 +5,8 @@ import { BaseType } from "../Type/BaseType";
 import { isAssignableTo } from "../Utils/isAssignableTo";
 import { narrowType } from "../Utils/narrowType";
 import { UnionType } from "../Type/UnionType";
+import { EnumType } from "../Type/EnumType";
+import { assert } from "console";
 
 export class ConditionalTypeNodeParser implements SubNodeParser {
     public constructor(protected typeChecker: ts.TypeChecker, protected childNodeParser: NodeParser) {}
@@ -24,30 +26,16 @@ export class ConditionalTypeNodeParser implements SubNodeParser {
             return this.childNodeParser.createType(result ? node.trueType : node.falseType, context);
         }
 
-        // Narrow down check type for both condition branches
-        const trueCheckType = narrowType(checkType, (type) => isAssignableTo(extendsType, type));
-        const falseCheckType = narrowType(checkType, (type) => !isAssignableTo(extendsType, type));
+        const types =
+            checkType instanceof UnionType || checkType instanceof EnumType ? checkType.getTypes() : [checkType];
 
-        // Follow the relevant branches and return the results from them
-        const results: BaseType[] = [];
-        if (trueCheckType !== undefined) {
-            const result = this.childNodeParser.createType(
-                node.trueType,
-                this.createSubContext(node, checkTypeParameterName, trueCheckType, context)
-            );
-            if (result) {
-                results.push(result);
-            }
-        }
-        if (falseCheckType !== undefined) {
-            const result = this.childNodeParser.createType(
-                node.falseType,
-                this.createSubContext(node, checkTypeParameterName, falseCheckType, context)
-            );
-            if (result) {
-                results.push(result);
-            }
-        }
+        const results = types.map((type) =>
+            this.childNodeParser.createType(
+                isAssignableTo(extendsType, type) ? node.trueType : node.falseType,
+                this.createSubContext(node, checkTypeParameterName, type!, context)
+            )
+        );
+
         return new UnionType(results).normalize();
     }
 
